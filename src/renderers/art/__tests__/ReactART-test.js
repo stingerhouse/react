@@ -48,17 +48,17 @@ function testDOMNodeStructure(domNode, expectedStructure) {
   }
 }
 
-describe('ReactART', () => {
+describe('ReactART', function() {
 
-  beforeEach(() => {
+  beforeEach(function() {
     ARTCurrentMode.setCurrent(ARTSVGMode);
 
     Group = ReactART.Group;
     Shape = ReactART.Shape;
     Surface = ReactART.Surface;
 
-    TestComponent = class extends React.Component {
-      render() {
+    TestComponent = React.createClass({
+      render: function() {
 
         var a =
           <Shape
@@ -93,10 +93,10 @@ describe('ReactART', () => {
           </Surface>
         );
       }
-    };
+    });
   });
 
-  it('should have the correct lifecycle state', () => {
+  it('should have the correct lifecycle state', function() {
     var instance = <TestComponent />;
     instance = ReactTestUtils.renderIntoDocument(instance);
     var group = instance.refs.group;
@@ -104,7 +104,7 @@ describe('ReactART', () => {
     expect(typeof group.indicate).toBe('function');
   });
 
-  it('should render a reasonable SVG structure in SVG mode', () => {
+  it('should render a reasonable SVG structure in SVG mode', function() {
     var instance = <TestComponent />;
     instance = ReactTestUtils.renderIntoDocument(instance);
 
@@ -135,7 +135,7 @@ describe('ReactART', () => {
     testDOMNodeStructure(realNode, expectedStructure);
   });
 
-  it('should be able to reorder components', () => {
+  it('should be able to reorder components', function() {
     var container = document.createElement('div');
     var instance = ReactDOM.render(<TestComponent flipped={false} />, container);
 
@@ -179,19 +179,19 @@ describe('ReactART', () => {
     testDOMNodeStructure(realNode, expectedNewStructure);
   });
 
-  it('should be able to reorder many components', () => {
+  it('should be able to reorder many components', function() {
     var container = document.createElement('div');
 
-    class Component extends React.Component {
-      render() {
+    var Component = React.createClass({
+      render: function() {
         var chars = this.props.chars.split('');
         return (
           <Surface>
             {chars.map((text) => <Shape key={text} title={text} />)}
           </Surface>
         );
-      }
-    }
+      },
+    });
 
     // Mini multi-child stress test: lots of reorders, some adds, some removes.
     var before = 'abcdefghijklmnopqrst';
@@ -207,19 +207,16 @@ describe('ReactART', () => {
     ReactDOM.unmountComponentAtNode(container);
   });
 
-  it('renders composite with lifecycle inside group', () => {
+  it('renders composite with lifecycle inside group', function() {
     var mounted = false;
-
-    class CustomShape extends React.Component {
-      render() {
+    var CustomShape = React.createClass({
+      render: function() {
         return <Shape />;
-      }
-
-      componentDidMount() {
+      },
+      componentDidMount: function() {
         mounted = true;
       }
-    }
-
+    });
     ReactTestUtils.renderIntoDocument(
       <Surface>
         <Group>
@@ -230,21 +227,18 @@ describe('ReactART', () => {
     expect(mounted).toBe(true);
   });
 
-  it('resolves refs before componentDidMount', () => {
-    class CustomShape extends React.Component {
-      render() {
+  it('resolves refs before componentDidMount', function() {
+    var CustomShape = React.createClass({
+      render: function() {
         return <Shape />;
       }
-    }
-
+    });
     var ref = null;
-
-    class Outer extends React.Component {
-      componentDidMount() {
+    var Outer = React.createClass({
+      componentDidMount: function() {
         ref = this.refs.test;
-      }
-
-      render() {
+      },
+      render: function() {
         return (
           <Surface>
             <Group>
@@ -253,31 +247,26 @@ describe('ReactART', () => {
           </Surface>
         );
       }
-    }
-
+    });
     ReactTestUtils.renderIntoDocument(<Outer />);
     expect(ref.constructor).toBe(CustomShape);
   });
 
-  it('resolves refs before componentDidUpdate', () => {
-    class CustomShape extends React.Component {
-      render() {
+  it('resolves refs before componentDidUpdate', function() {
+    var CustomShape = React.createClass({
+      render: function() {
         return <Shape />;
       }
-    }
-
+    });
     var ref = {};
-
-    class Outer extends React.Component {
-      componentDidMount() {
+    var Outer = React.createClass({
+      componentDidMount: function() {
         ref = this.refs.test;
-      }
-
-      componentDidUpdate() {
+      },
+      componentDidUpdate: function() {
         ref = this.refs.test;
-      }
-
-      render() {
+      },
+      render: function() {
         return (
           <Surface>
             <Group>
@@ -286,8 +275,7 @@ describe('ReactART', () => {
           </Surface>
         );
       }
-    }
-
+    });
     var container = document.createElement('div');
     ReactDOM.render(<Outer />, container);
     expect(ref).not.toBeDefined();
@@ -295,4 +283,33 @@ describe('ReactART', () => {
     expect(ref.constructor).toBe(CustomShape);
   });
 
+  it('adds and updates event handlers', function() {
+    const container = document.createElement('div');
+
+    function render(onClick) {
+      return ReactDOM.render(
+        <Surface>
+          <Shape onClick={onClick} />
+        </Surface>,
+        container,
+      );
+    }
+
+    function doClick(instance) {
+      const path = ReactDOM.findDOMNode(instance).querySelector('path');
+
+      // ReactTestUtils.Simulate.click doesn't work with SVG elements
+      path.click();
+    }
+
+    const onClick1 = jest.fn();
+    let instance = render(onClick1);
+    doClick(instance);
+    expect(onClick1).toBeCalled();
+
+    const onClick2 = jest.fn();
+    instance = render(onClick2);
+    doClick(instance);
+    expect(onClick2).toBeCalled();
+  });
 });
